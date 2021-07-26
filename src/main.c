@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,36 +30,44 @@ main(void)
 
 		clientfd = accept_client(serverfd);
 		if (clientfd == -1) {
-			fprintf(stderr,
-				"accept_client: unable to acccept client.");
+			fprintf(stderr, "kvatch: unable to acccept client.");
 			run = false;
 		}
 
-		struct bundle *bundle = parse_request(clientfd);
-		if (bundle == NULL) {
+
+		struct unit *unit = parse_request(clientfd);
+		if (unit == NULL) {
 			send_response(clientfd, "ERR\n");
 			close(clientfd);
 			continue;
 		}
 
-		switch (bundle->code) {
+		switch (unit->code) {
 		case OP_ERR:
 			break;
 		case OP_ADD:
-			dict_add(dict, bundle->dictentry->key, bundle->dictentry->value);
+			if (dict_add(dict, unit->key, unit->value) == NULL) {
+				fprintf(stderr, "kvatch: unable to add entry");
+				ok = false;
+			}
 			break;
 		case OP_GET:
-			value = (char *)dict_get(dict, bundle->dictentry->key);
-			send_response(clientfd, value);
+			value = (char *)dict_get(dict, unit->key);
+			if (value != NULL && isprint(value[0])) {
+				send_response(clientfd, value);
+			} else {
+				fprintf(stderr, "kvatch: key does not exist");
+				ok = false;
+			}
 			break;
 		case OP_DEL:
-			dict_del(dict, bundle->dictentry->key);
+			dict_del(dict, unit->key);
 			break;
 		}
 
 		send_response(clientfd, ok ? "OK\n" : "ERR\n");
 
-		freebundle(bundle);
+		freeunit(unit);
 		close(clientfd);
 	} while (run);
 

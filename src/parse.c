@@ -39,19 +39,12 @@ parse_op(char *str)
 	return OP_ERR;
 }
 
-struct entry *
-entrytok(char *strentry, char *delim)
+bool
+entrytok(struct unit *unit, char *strentry, char *delim)
 {
 	char *split;
-	struct entry *dictentry;
 
 	strentry = stripspaces(strentry);
-
-	dictentry = calloc(1, sizeof(struct entry));
-	if (dictentry == NULL) {
-		fprintf(stderr, "entrytok: unable to allocate entry\n");
-		goto fail;
-	}
 
 	split = strstr(strentry, delim);
 	if (split == NULL) {
@@ -59,31 +52,30 @@ entrytok(char *strentry, char *delim)
 		goto fail;
 	}
 
-	if ((dictentry->key = strndup(strentry, split - strentry - 1)) == NULL) {
+	if ((unit->key = strndup(strentry, split - strentry - 1)) == NULL) {
 		perror("strndup");
 		goto fail;
 	}
-	if ((dictentry->value = strdup(
+	if ((unit->value = strdup(
 			stripspaces(split + strlen(delim)))) == NULL) {
 		perror("strdup");
 		goto fail;
 	}
-	return dictentry;
+	return true;
 fail:
-	free(dictentry->key);
-	free(dictentry->value);
-	free(dictentry);
+	free(unit->key);
+	free(unit->value);
 	free(split);
-	return NULL;
+	return false;
 }
 
-struct bundle *
+struct unit *
 parse_request(int clientfd)
 {
 	char *buf;
 	ssize_t nb;
 	enum operation op;
-	struct bundle *bundle;
+	struct unit *unit;
 
 	buf = calloc(BUFSIZE, sizeof(char));
 	if ((nb = read(clientfd, buf, BUFSIZE - 1)) == -1) {
@@ -97,42 +89,40 @@ parse_request(int clientfd)
 		goto fail;
 	}
 
-	bundle = malloc(sizeof(struct bundle));
-	if (bundle == NULL) {
-		perror("bundle");
+	unit = malloc(sizeof(struct unit));
+	if (unit == NULL) {
+		perror("unit");
 		goto fail;
 	}
-	bundle->code = op;
+	unit->code = op;
 
 	if (op == OP_ADD) {
-		if ((bundle->dictentry = entrytok(strtok(NULL, ""), "->")) == NULL) {
+		entrytok(unit, strtok(NULL, ""), "->");
+		if (unit->key == NULL || unit->value == NULL) {
 			fprintf(stderr, "parse_request: unable to form entry\n");
 			goto fail;
 		}
 	} else {
-		bundle->dictentry = calloc(1, sizeof(struct entry));
-		if (bundle->dictentry == NULL) {
-			fprintf(stderr, "parse_request: unable to form entry\n");
+		unit->key = strdup(stripspaces(strtok(NULL, "")));
+		if (unit->key == NULL) {
+			perror("strdup");
 			goto fail;
 		}
-		bundle->dictentry->key = strdup(stripspaces(strtok(NULL, "")));
 	}
 
 
 	free(buf);
-	return bundle;
+	return unit;
 fail:
 	free(buf);
-	freebundle(bundle);
+	freeunit(unit);
 	return NULL;
 }
 
 void
-freebundle(struct bundle *bundle)
+freeunit(struct unit *unit)
 {
-	if (bundle->dictentry) {
-		free(bundle->dictentry->key);
-		free(bundle->dictentry);
-	}
-	free(bundle);
+	/* Value is intentionally left unfree. */
+	free(unit->key);
+	free(unit);
 }

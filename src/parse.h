@@ -2,6 +2,7 @@
 #define TRANSACTION_H
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -20,16 +21,17 @@ enum operation {
 	OP_DEL,
 };
 
-struct bundle {
+struct unit {
 	enum operation code;
-	struct entry *dictentry;
+	char *key;
+	char *value;
 };
 
 enum operation parse_op(char *str);
 
-struct bundle *parse_request(int clientfd);
-struct entry *entrytok(char *strentry, char *delim);
+struct unit *parse_request(int clientfd);
+bool entrytok(struct unit *unit, char *strentry, char *delim);
 
-void freebundle(struct bundle *bundle);
+void freeunit(struct unit *unit);
 
 #endif
