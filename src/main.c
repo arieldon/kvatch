@@ -10,14 +10,23 @@
 int
 main(void)
 {
-	bool run = true;
+	char *value;
+	bool ok, run = true;
 	int serverfd, clientfd;
 
 	if ((serverfd = init_server(PORT)) == -1) {
 		exit(EXIT_FAILURE);
 	}
 
+	struct dict *dict = dict_create();
+	if (dict == NULL) {
+		close(serverfd);
+		exit(EXIT_FAILURE);
+	}
+
 	do {
+		ok = true;
+
 		clientfd = accept_client(serverfd);
 		if (clientfd == -1) {
 			fprintf(stderr,
@@ -27,33 +36,29 @@ main(void)
 
 		struct bundle *bundle = parse_request(clientfd);
 		if (bundle == NULL) {
-			send_response(clientfd, "Unable to process request.\n");
+			send_response(clientfd, "ERR\n");
 			close(clientfd);
 			continue;
 		}
 
-		printf("op: %d\n", bundle->code);
-		if (bundle->dictentry) {
-			printf("key: %s\n", bundle->dictentry->key);
-			printf("value: %s\n", (char *)bundle->dictentry->value);
-		}
-
-		switch (op) {
+		switch (bundle->code) {
+		case OP_ERR:
+			break;
 		case OP_ADD:
-			/* TODO */
+			dict_add(dict, bundle->dictentry->key, bundle->dictentry->value);
 			break;
 		case OP_GET:
-			/* TODO */
+			value = (char *)dict_get(dict, bundle->dictentry->key);
+			send_response(clientfd, value);
 			break;
 		case OP_DEL:
-			/* TODO */
+			dict_del(dict, bundle->dictentry->key);
 			break;
 		}
 
-		send_response(clientfd, "Request successfully processed.\n");
+		send_response(clientfd, ok ? "OK\n" : "ERR\n");
 
 		freebundle(bundle);
-
 		close(clientfd);
 	} while (run);
 

@@ -1,11 +1,12 @@
 #include "parse.h"
 
 static char *
-strip_right_spaces(char *str)
+stripspaces(char *str)
 {
 	size_t trailing_spaces = 0;
 
-	for (ssize_t i = strlen(str); i >= 0; --i) {
+	/* Strip trailing spaces. */
+	for (ssize_t i = strlen(str) - 1; i >= 0; --i) {
 		if (!isspace(str[i])) {
 			break;
 		}
@@ -13,19 +14,10 @@ strip_right_spaces(char *str)
 	}
 	str[strlen(str) - trailing_spaces] = '\0';
 
+	/* Strip leading spaces. */
+	str = str + strspn(str, " \f\n\r\t\v");
+
 	return str;
-}
-
-static char *
-strip_left_spaces(char *str)
-{
-	return str + strspn(str, " ");
-}
-
-static char *
-strip_spaces(char *str)
-{
-	return strip_right_spaces(strip_left_spaces(str));
 }
 
 enum operation
@@ -53,7 +45,7 @@ entrytok(char *strentry, char *delim)
 	char *split;
 	struct entry *dictentry;
 
-	strentry = strip_spaces(strentry);
+	strentry = stripspaces(strentry);
 
 	dictentry = calloc(1, sizeof(struct entry));
 	if (dictentry == NULL) {
@@ -67,12 +59,12 @@ entrytok(char *strentry, char *delim)
 		goto fail;
 	}
 
-	if ((dictentry->key = strndup(strentry, split - strentry)) == NULL) {
+	if ((dictentry->key = strndup(strentry, split - strentry - 1)) == NULL) {
 		perror("strndup");
 		goto fail;
 	}
 	if ((dictentry->value = strdup(
-			strip_spaces(split + strlen(delim)))) == NULL) {
+			stripspaces(split + strlen(delim)))) == NULL) {
 		perror("strdup");
 		goto fail;
 	}
@@ -118,8 +110,14 @@ parse_request(int clientfd)
 			goto fail;
 		}
 	} else {
-		bundle->dictentry = NULL;
+		bundle->dictentry = calloc(1, sizeof(struct entry));
+		if (bundle->dictentry == NULL) {
+			fprintf(stderr, "parse_request: unable to form entry\n");
+			goto fail;
+		}
+		bundle->dictentry->key = strdup(stripspaces(strtok(NULL, "")));
 	}
+
 
 	free(buf);
 	return bundle;
@@ -134,7 +132,6 @@ freebundle(struct bundle *bundle)
 {
 	if (bundle->dictentry) {
 		free(bundle->dictentry->key);
-		free(bundle->dictentry->value);
 		free(bundle->dictentry);
 	}
 	free(bundle);
