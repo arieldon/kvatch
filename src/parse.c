@@ -75,7 +75,7 @@ parse_request(int clientfd)
 	char *buf;
 	ssize_t nb;
 	enum operation op;
-	struct unit *unit;
+	struct unit *unit = NULL;
 
 	buf = calloc(BUFSIZE, sizeof(char));
 	if ((nb = read(clientfd, buf, BUFSIZE - 1)) == -1) {
@@ -110,7 +110,6 @@ parse_request(int clientfd)
 		}
 	}
 
-
 	free(buf);
 	return unit;
 fail:
@@ -122,7 +121,7 @@ fail:
 void
 freeunit(struct unit *unit)
 {
-	/* Value is intentionally left unfree. */
-	free(unit->key);
+	/* `value` of `unit` left unfree as it is stored in the table. */
+	if (unit != NULL) { free(unit->key); }
 	free(unit);
 }
