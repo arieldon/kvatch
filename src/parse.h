@@ -12,24 +12,24 @@
 
 #include "dict.h"
 
-enum operation {
-	OP_ERR,
-	OP_ADD,
-	OP_GET,
-	OP_DEL,
+enum httpmethod {
+	METHOD_ERR,
+	METHOD_GET,
+	METHOD_PUT,
+	METHOD_DEL,
 };
 
-struct unit {
-	enum operation code;
-	char *key;
-	char *value;
+struct request {
+	enum httpmethod method;
+	char *uri;
+	char *version;
+	struct dict *header;
+	char *body;
 };
 
-enum operation parse_op(char *str);
+enum httpmethod parse_method(char *str);
 
-struct unit *parse_request(int clientfd);
-bool entrytok(struct unit *unit, char *strentry, char *delim);
-
-void freeunit(struct unit *unit);
+struct request parse_request(int clientfd);
+void free_request(struct request *request);
 
 #endif

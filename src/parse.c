@@ -1,124 +1,80 @@
 #include "parse.h"
 
-static char *
-stripspaces(char *str)
-{
-	size_t trailing_spaces = 0;
-
-	/* Strip trailing spaces. */
-	for (ssize_t i = strlen(str) - 1; i >= 0; --i) {
-		if (!isspace(str[i])) {
-			break;
-		}
-		++trailing_spaces;
-	}
-	str[strlen(str) - trailing_spaces] = '\0';
-
-	/* Strip leading spaces. */
-	str = str + strspn(str, " \f\n\r\t\v");
-
-	return str;
-}
-
-enum operation
-parse_op(char *str)
+enum httpmethod
+parse_method(char *str)
 {
 	size_t len = strlen(str);
 	for (size_t i = 0; i < len; ++i) {
 		str[i] = toupper(str[i]);
 	}
 
-	if (strncmp(str, "ADD", len) == 0) {
-		return OP_ADD;
-	} else if (strncmp(str, "GET", len) == 0) {
-		return OP_GET;
-	} else if (strncmp(str, "DEL", len) == 0) {
-		return OP_DEL;
+	if (strncmp(str, "GET", len) == 0) {
+		return METHOD_GET;
+	} else if (strncmp(str, "PUT", len) == 0) {
+		return METHOD_PUT;
+	} else if (strncmp(str, "DELETE", len) == 0) {
+		return METHOD_DEL;
 	}
 
-	return OP_ERR;
+	return METHOD_ERR;
 }
 
-bool
-entrytok(struct unit *unit, char *strentry, char *delim)
+static char *
+trim_spaces(char *str)
 {
-	char *split;
+	if (str == NULL) return NULL;
 
-	strentry = stripspaces(strentry);
+	size_t len = strlen(str);
+	size_t trailing_spaces = 0;
 
-	split = strstr(strentry, delim);
-	if (split == NULL) {
-		fprintf(stderr, "entrytok: unable to locate delimeter\n");
-		goto fail;
+	for (ssize_t i = len - 1; i >= 0; --i) {
+		if (!isspace(str[i])) {
+			break;
+		}
+		++trailing_spaces;
 	}
+	str[len - trailing_spaces] = 0;
 
-	if ((unit->key = strndup(strentry, split - strentry - 1)) == NULL) {
-		perror("strndup");
-		goto fail;
-	}
-	if ((unit->value = strdup(
-			stripspaces(split + strlen(delim)))) == NULL) {
-		perror("strdup");
-		goto fail;
-	}
-	return true;
-fail:
-	free(unit->key);
-	free(unit->value);
-	free(split);
-	return false;
+	return str + strspn(str, " \f\n\r\t\v");
 }
 
-struct unit *
+struct request
 parse_request(int clientfd)
 {
-	enum operation op;
-	struct unit *unit = NULL;
+	struct request req = { 0 };
 
 	char buf[BUFSIZ];
 	ssize_t n = read(clientfd, buf, BUFSIZ - 1);
 	if (n == -1) {
 		perror("read");
-		goto fail;
-	}
-	puts(buf);
-
-	if ((op = parse_op(strtok(buf, ":"))) == OP_ERR) {
-		fprintf(stderr, "parse_request: unable to parse operator\n");
-		goto fail;
+		return req;
 	}
 
-	unit = malloc(sizeof(struct unit));
-	if (unit == NULL) {
-		perror("unit");
-		goto fail;
-	}
-	unit->code = op;
+	char *key, *value;
+	char *pos, *pos_prime;
+	char *line = strtok_r(buf, "\n", &pos);
 
-	if (op == OP_ADD) {
-		entrytok(unit, strtok(NULL, ""), "->");
-		if (unit->key == NULL || unit->value == NULL) {
-			fprintf(stderr, "parse_request: unable to form entry\n");
-			goto fail;
-		}
-	} else {
-		unit->key = strdup(stripspaces(strtok(NULL, "")));
-		if (unit->key == NULL) {
-			perror("strdup");
-			goto fail;
-		}
+	req.method = parse_method(strtok_r(line, " ", &pos_prime));
+	if (req.method == METHOD_ERR) {
+		return req;
+	}
+	req.uri = strtok_r(NULL, " ", &pos_prime);
+	req.version = trim_spaces(strtok_r(NULL, " ", &pos_prime));
+
+	req.header = dict_create();
+	while ((line = trim_spaces(strtok_r(NULL, "\n", &pos))) != NULL && line[0] != 0) {
+		key = strtok_r(line, ":", &pos_prime);
+		value = strtok_r(NULL, "", &pos_prime);
+		dict_add(req.header, trim_spaces(key), trim_spaces(value));
 	}
 
-	return unit;
-fail:
-	freeunit(unit);
-	return NULL;
+	req.body = strtok_r(NULL, "", &pos);
+
+	return req;
 }
 
 void
-freeunit(struct unit *unit)
+free_request(struct request *req)
 {
-	/* `value` of `unit` left unfree as it is stored in the table. */
-	if (unit != NULL) { free(unit->key); }
-	free(unit);
+	dict_destroy(req->header);
 }

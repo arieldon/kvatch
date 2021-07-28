@@ -14,7 +14,7 @@ int
 main(void)
 {
 	char *value;
-	bool ok, run = true;
+	bool run = true;
 	int serverfd, clientfd;
 
 	nfds_t nfds = 0;
@@ -49,8 +49,6 @@ main(void)
 
 		for (size_t i = 0; i < nfds; ++i) {
 			if (fds[i].revents & POLLIN) {
-				ok = true;
-
 				if (fds[i].fd == serverfd) {
 					clientfd = accept_client(serverfd);
 					if (clientfd == -1) {
@@ -79,39 +77,33 @@ main(void)
 					continue;
 				}
 
-				struct unit *unit = parse_request(fds[i].fd);
-				if (unit == NULL) {
-					send_response(fds[i].fd, "ERR\n");
-					close(fds[i].fd);
-					fds[i] = fds[--nfds];
-					continue;
-				}
+				struct request req = parse_request(fds[i].fd);
 
-				switch (unit->code) {
-				case OP_ERR:
+				switch (req.method) {
+				case METHOD_ERR:
+					send_response(fds[i].fd, "HTTP/1.0 501 Not Implemented\r\n\r\n");
 					break;
-				case OP_ADD:
-					if (dict_add(dict, unit->key, unit->value) == NULL) {
-						fprintf(stderr, "kvatch: unable to add entry");
-						ok = false;
-					}
-					break;
-				case OP_GET:
-					value = (char *)dict_get(dict, unit->key);
-					if (value != NULL && isprint(value[0])) {
-						send_response(fds[i].fd, value);
+				case METHOD_GET:
+					if ((value = dict_get(dict, req.uri + 1)) == NULL) {
+						send_response(fds[i].fd, "HTTP/1.0 404 Not Found\r\n\r\n");
 					} else {
-						fprintf(stderr, "kvatch: key does not exist");
-						ok = false;
+						char buf[BUFSIZ];
+						snprintf(buf, BUFSIZ, "HTTP/1.0 200 OK\r\n\r\n{'%s': '%s'}",
+								req.uri + 1, value);
+						printf("value: %s\n", buf);
+						send_response(fds[i].fd, buf);
 					}
 					break;
-				case OP_DEL:
-					dict_del(dict, unit->key);
+				case METHOD_PUT:
+					dict_add(dict, req.uri + 1, req.body);
+					send_response(fds[i].fd, "HTTP/1.0 204 No Content\r\n\r\n");
+					break;
+				case METHOD_DEL:
+					dict_del(dict, req.uri + 1);
+					send_response(fds[i].fd, "HTTP/1.0 200 OK\r\n\r\n");
 					break;
 				}
 
-				send_response(fds[i].fd, ok ? "OK\n" : "ERR\n");
-				freeunit(unit);
 				close(fds[i].fd);
 				fds[i] = fds[--nfds];
 			}
