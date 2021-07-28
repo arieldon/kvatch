@@ -72,13 +72,12 @@ fail:
 struct unit *
 parse_request(int clientfd)
 {
-	char *buf;
-	ssize_t nb;
 	enum operation op;
 	struct unit *unit = NULL;
 
-	buf = calloc(BUFSIZE, sizeof(char));
-	if ((nb = read(clientfd, buf, BUFSIZE - 1)) == -1) {
+	char buf[BUFSIZ];
+	ssize_t n = read(clientfd, buf, BUFSIZ - 1);
+	if (n == -1) {
 		perror("read");
 		goto fail;
 	}
@@ -110,10 +109,8 @@ parse_request(int clientfd)
 		}
 	}
 
-	free(buf);
 	return unit;
 fail:
-	free(buf);
 	freeunit(unit);
 	return NULL;
 }

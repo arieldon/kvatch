@@ -12,8 +12,6 @@
 
 #include "dict.h"
 
-#define BUFSIZE	4096
-
 enum operation {
 	OP_ERR,
 	OP_ADD,
