@@ -50,30 +50,10 @@ main(void)
 		for (size_t i = 0; i < nfds; ++i) {
 			if (fds[i].revents & POLLIN) {
 				if (fds[i].fd == serverfd) {
-					clientfd = accept_client(serverfd);
+					clientfd = accept_client(serverfd, &fds, &nfds, &fdsz);
 					if (clientfd == -1) {
 						fprintf(stderr, "kvatch: unable to acccept client.");
-						run = false;
 					}
-
-					if (nfds >= fdsz) {
-						nfds_t fdsz_prime = fdsz * 2;
-						struct pollfd *fds_prime = realloc(fds,
-								sizeof(struct pollfd) * fdsz_prime);
-						if (fds_prime == NULL) {
-							perror("realloc");
-							run = false;
-							break;
-						}
-
-						fdsz = fdsz_prime;
-						fds = fds_prime;
-					}
-
-					fds[nfds].fd = clientfd;
-					fds[nfds].events = POLLIN;
-					++nfds;
-
 					continue;
 				}
 

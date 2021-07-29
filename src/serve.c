@@ -55,22 +55,12 @@ init_server(char *port)
 	return fd;
 }
 
-static void *
-in_addr(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in *)sa)->sin_addr);
-	}
-	return &(((struct sockaddr_in6 *)sa)->sin6_addr);
-}
-
 int
-accept_client(int serverfd)
+accept_client(int serverfd, struct pollfd *fds[], nfds_t *nfds, nfds_t *fdsz)
 {
 	int clientfd;
 	struct sockaddr_storage clientaddr;
 	socklen_t clientaddrlen = sizeof(struct sockaddr);
-	char clientaddrstr[INET6_ADDRSTRLEN];
 
 	if ((clientfd = accept(serverfd, (struct sockaddr *)&clientaddr,
 			&clientaddrlen)) == -1) {
@@ -78,8 +68,21 @@ accept_client(int serverfd)
 		return -1;
 	}
 
-	inet_ntop(clientaddr.ss_family, in_addr((struct sockaddr *)&clientaddr),
-			clientaddrstr, INET6_ADDRSTRLEN);
+	if (*nfds >= *fdsz) {
+		nfds_t fdsz_prime = *fdsz * 2;
+		struct pollfd *fds_prime = realloc(*fds, sizeof(struct pollfd) * fdsz_prime);
+		if (fds_prime == NULL) {
+			perror("realloc");
+			return -1;
+		}
+
+		*fdsz = fdsz_prime;
+		*fds = fds_prime;
+	}
+
+	(*fds)[*nfds].fd = clientfd;
+	(*fds)[*nfds].events = POLLIN;
+	++(*nfds);
 
 	return clientfd;
 }
