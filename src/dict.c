@@ -27,6 +27,7 @@ dict_destroy(struct dict *d)
 	for (size_t i = 0; i < d->capacity; ++i) {
 		if (d->entries[i].key != NULL) {
 			free(d->entries[i].key);
+			free(d->entries[i].value);
 		}
 	}
 
@@ -138,7 +139,7 @@ _dict_set(struct entry *entries, size_t *size, size_t capacity,
 
 		++(*size);
 	}
-	entry->value = value;
+	entry->value = strdup((char *)value);
 
 	return entry;
 }

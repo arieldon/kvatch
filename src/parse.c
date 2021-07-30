@@ -43,7 +43,7 @@ parse_request(int clientfd)
 {
 	struct request req = { 0 };
 
-	char buf[BUFSIZ];
+	char buf[BUFSIZ] = { 0 };
 	ssize_t n = read(clientfd, buf, BUFSIZ - 1);
 	if (n == -1) {
 		perror("read");
@@ -68,7 +68,7 @@ parse_request(int clientfd)
 		dict_add(req.header, trim_spaces(key), trim_spaces(value));
 	}
 
-	req.body = strtok_r(NULL, "", &pos);
+	req.body = strtok_r(NULL, "\0", &pos);
 
 	return req;
 }
