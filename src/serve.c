@@ -88,7 +88,32 @@ accept_client(int serverfd, struct pollfd *fds[], nfds_t *nfds, nfds_t *fdsz)
 }
 
 void
-send_response(int clientfd, char *msg)
+send_response(int clientfd, enum httpstatus status, char *body)
 {
-	write(clientfd, msg, strlen(msg));
+	char strstatus[32] = { 0 };
+	char buf[BUFSIZ] = { 0 };
+
+	switch (status) {
+	case STATUS_OK:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "OK");
+		break;
+	case STATUS_CREATED:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "Created");
+		break;
+	case STATUS_NO_CONTENT:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "No Content");
+		break;
+	case STATUS_BAD_REQUEST:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "Bad Request");
+		break;
+	case STATUS_NOT_FOUND:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "Not Found");
+		break;
+	case STATUS_NOT_IMPLEMENTED:
+		snprintf(strstatus, sizeof(strstatus), "%d %s", status, "Not Implemented");
+		break;
+	}
+
+	snprintf(buf, BUFSIZ, "HTTP/1.0 %s\r\n\r\n%s", strstatus, body);
+	write(clientfd, buf, strlen(buf));
 }

@@ -61,30 +61,33 @@ main(void)
 
 				switch (req.method) {
 				case METHOD_ERR:
-					send_response(fds[i].fd, "HTTP/1.0 501 Not Implemented\r\n\r\n");
+					send_response(fds[i].fd, STATUS_NOT_IMPLEMENTED, "");
 					break;
 				case METHOD_GET:
 					if ((value = dict_get(dict, req.uri + 1)) == NULL) {
-						send_response(fds[i].fd, "HTTP/1.0 404 Not Found\r\n\r\n");
+						send_response(fds[i].fd, STATUS_NOT_FOUND, "");
 					} else {
-						char buf[BUFSIZ];
-						snprintf(buf, BUFSIZ, "HTTP/1.0 200 OK\r\n\r\n{'%s': '%s'}",
-								req.uri + 1, value);
-						printf("value: %s\n", buf);
-						send_response(fds[i].fd, buf);
+						char body[BUFSIZ] = { 0 };
+						snprintf(body, BUFSIZ, "{'%s': '%s'}\n", req.uri + 1, value);
+						send_response(fds[i].fd, STATUS_OK, body);
 					}
 					break;
 				case METHOD_PUT:
-					dict_add(dict, req.uri + 1, req.body);
-					send_response(fds[i].fd, "HTTP/1.0 204 No Content\r\n\r\n");
+					if (req.body == NULL || req.body[0] == '\0') {
+						send_response(fds[i].fd, STATUS_BAD_REQUEST, "");
+					} else {
+						dict_add(dict, req.uri + 1, req.body);
+						send_response(fds[i].fd, STATUS_CREATED, "");
+					}
 					break;
 				case METHOD_DEL:
 					dict_del(dict, req.uri + 1);
-					send_response(fds[i].fd, "HTTP/1.0 200 OK\r\n\r\n");
+					send_response(fds[i].fd, STATUS_NO_CONTENT, "");
 					break;
 				}
 
 				close(fds[i].fd);
+				free_request(&req);
 				fds[i] = fds[--nfds];
 			}
 		}
