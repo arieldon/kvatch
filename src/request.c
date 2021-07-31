@@ -79,5 +79,7 @@ parse_request(int clientfd)
 void
 free_request(struct request *req)
 {
-	dict_destroy(req->header);
+	if (req->header) {
+		dict_clear(req->header);
+	}
 }
