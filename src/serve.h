@@ -1,5 +1,5 @@
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef SERVE_H
+#define SERVE_H
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,7 +13,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#define PORT	"4000"
+#include "parse.h"
+#include "dict.h"
+
+#define resp_code(status)	respond(server->fds[i].fd, status, "")
+#define format_status(msg)	snprintf(strstatus, sizeof(strstatus), \
+					"%d %s", \
+					status, msg)
 
 enum httpstatus {
 	STATUS_OK = 200,
@@ -24,8 +30,20 @@ enum httpstatus {
 	STATUS_NOT_IMPLEMENTED = 501,
 };
 
-int init_server(char *port);
-int accept_client(int serverfd, struct pollfd *fds[], nfds_t *nfds, nfds_t *fdsz);
-void send_response(int clientfd, enum httpstatus status, char *body);
+struct httpserver {
+	char *port;
+	int fd;
+
+	struct pollfd *fds;
+	nfds_t nfds;
+	nfds_t fdsz;
+};
+
+int init_server(struct httpserver *server);
+int run_server(struct httpserver *server, struct dict *dict);
+void free_server(struct httpserver *server);
+
+int accept_client(struct httpserver *server);
+void respond(int clientfd, enum httpstatus status, char *body);
 
 #endif
