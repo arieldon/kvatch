@@ -13,8 +13,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "parse.h"
 #include "dict.h"
+#include "request.h"
 
 #define resp_code(status)	respond(server->fds[i].fd, status, "")
 #define format_status(msg)	snprintf(strstatus, sizeof(strstatus), \
