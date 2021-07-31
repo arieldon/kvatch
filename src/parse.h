@@ -1,5 +1,5 @@
-#ifndef TRANSACTION_H
-#define TRANSACTION_H
+#ifndef REQUEST_H
+#define REQUEST_H
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -26,8 +26,6 @@ struct request {
 	struct dict *header;
 	char *body;
 };
-
-enum httpmethod parse_method(char *str);
 
 struct request parse_request(int clientfd);
 void free_request(struct request *request);

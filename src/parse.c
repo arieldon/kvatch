@@ -1,6 +1,6 @@
 #include "parse.h"
 
-enum httpmethod
+static enum httpmethod
 parse_method(char *str)
 {
 	size_t len = strlen(str);
@@ -50,7 +50,6 @@ parse_request(int clientfd)
 		return req;
 	}
 
-	char *key, *value;
 	char *pos, *pos_prime;
 	char *line = strtok_r(buf, "\n", &pos);
 
@@ -62,9 +61,13 @@ parse_request(int clientfd)
 	req.version = trim_spaces(strtok_r(NULL, " ", &pos_prime));
 
 	req.header = dict_create();
-	while ((line = trim_spaces(strtok_r(NULL, "\n", &pos))) != NULL && line[0] != 0) {
-		key = strtok_r(line, ":", &pos_prime);
-		value = strtok_r(NULL, "", &pos_prime);
+	while ((line = trim_spaces(strtok_r(NULL, "\n", &pos))) != NULL) {
+		if (line[0] == '\0') {
+			break;
+		}
+
+		char *key = strtok_r(line, ":", &pos_prime);
+		char *value = strtok_r(NULL, "", &pos_prime);
 		dict_add(req.header, trim_spaces(key), trim_spaces(value));
 	}
 
