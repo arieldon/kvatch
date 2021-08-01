@@ -1,86 +1,5 @@
 #include "dict.h"
 
-struct dict *
-dict_create(void)
-{
-	struct dict *d = malloc(sizeof(struct dict));
-	if (d == NULL) {
-		fprintf(stderr, "dict_create: unable to allocate dict\n");
-		return NULL;
-	}
-
-	d->size = 0;
-	d->capacity = DICT_INITIAL_CAPACITY;
-
-	d->entries = calloc(d->capacity, sizeof(struct entry));
-	if (d->entries == NULL) {
-		free(d);
-		return NULL;
-	}
-
-	return d;
-}
-
-void
-dict_destroy(struct dict *d)
-{
-	for (size_t i = 0; i < d->capacity; ++i) {
-		if (d->entries[i].key != NULL) {
-			free(d->entries[i].key);
-			free(d->entries[i].value);
-		}
-	}
-
-	free(d->entries);
-	free(d);
-}
-
-struct entry *
-dict_add(struct dict *d, const char *key, void *value)
-{
-	if (d->size + 1 > d->capacity * DICT_MAX_LOAD_CAPACITY) {
-		_dict_expand(d);
-	}
-
-	return _dict_set(d->entries, &d->size, d->capacity, key, value);
-}
-
-void *
-dict_get(struct dict *d, const char *key)
-{
-	assert(key != NULL);
-
-	if (d->size == 0) {
-		return NULL;
-	}
-
-	return _dict_find(d->entries, d->capacity, key)->value;
-}
-
-void *
-dict_del(struct dict *d, const char *key)
-{
-	assert(key != NULL);
-
-	if (d->size == 0) {
-		return NULL;
-	}
-
-	void *value = NULL;
-	struct entry *entry = _dict_find(d->entries, d->capacity, key);
-
-	if (strcmp(key, entry->key) == 0) {
-		value = entry->value;
-
-		/* Replace entry with tombstone. */
-		free(entry->key);
-		entry->key = NULL;
-		*(int *)entry->value = 1;
-	}
-
-	return value;
-}
-
 uint32_t
 _dict_hash(const char *key)
 {
@@ -125,7 +44,7 @@ _dict_find(struct entry *entries, size_t capacity, const char *key)
 
 struct entry *
 _dict_set(struct entry *entries, size_t *size, size_t capacity,
-	const char *key, void *value)
+	const char *key, char *value)
 {
 	assert(key != NULL && value != NULL);
 
@@ -145,33 +64,112 @@ _dict_set(struct entry *entries, size_t *size, size_t capacity,
 }
 
 void
-_dict_expand(struct dict *d)
+_dict_expand(struct dict *dict)
 {
-	size_t size = 0;
-	size_t capacity = d->capacity * 2;
+	size_t capacity = dict->capacity * 2;
 	struct entry *entry;
 
-	if (capacity < d->capacity) {
+	if (capacity < dict->capacity) {
 		return;
 	}
 
 	struct entry *entries = calloc(capacity, sizeof(struct entry));
-	if (d->entries == NULL) {
+	if (dict->entries == NULL) {
 		return;
 	}
 
-	for (size_t i = 0; i < d->capacity; ++i) {
-		entry = &d->entries[i];
+	for (size_t i = 0; i < dict->capacity; ++i) {
+		entry = &dict->entries[i];
 		if (entry->key != NULL) {
-			_dict_set(entries, &size, capacity, entry->key,
+			_dict_set(entries, &dict->size, capacity, entry->key,
 				entry->value);
 			free(entry->key);
 		}
 	}
 
-	d->size = size;
-	d->capacity = capacity;
+	dict->capacity = capacity;
 
-	free(d->entries);
-	d->entries = entries;
+	free(dict->entries);
+	dict->entries = entries;
+}
+
+struct dict *
+dict_create(void)
+{
+	struct dict *dict = malloc(sizeof(struct dict));
+	if (dict == NULL) {
+		fprintf(stderr, "dict_create: unable to allocate dict\n");
+		return NULL;
+	}
+
+	dict->size = 0;
+	dict->capacity = DICT_INITIAL_CAPACITY;
+
+	dict->entries = calloc(dict->capacity, sizeof(struct entry));
+	if (dict->entries == NULL) {
+		free(dict);
+		return NULL;
+	}
+
+	return dict;
+}
+
+void
+dict_clear(struct dict *dict)
+{
+	for (size_t i = 0; i < dict->capacity; ++i) {
+		if (dict->entries[i].key != NULL) {
+			free(dict->entries[i].key);
+			free(dict->entries[i].value);
+		}
+	}
+	free(dict->entries);
+	free(dict);
+}
+
+struct entry *
+dict_add(struct dict *dict, const char *key, char *value)
+{
+	if (dict->size + 1 > dict->capacity * DICT_MAX_LOAD_CAPACITY) {
+		_dict_expand(dict);
+	}
+	return _dict_set(dict->entries, &dict->size, dict->capacity, key, value);
+}
+
+char *
+dict_get(struct dict *dict, const char *key)
+{
+	assert(key != NULL);
+
+	if (dict->size == 0) {
+		return NULL;
+	}
+
+	return _dict_find(dict->entries, dict->capacity, key)->value;
+}
+
+char *
+dict_del(struct dict *dict, const char *key)
+{
+	assert(key != NULL);
+
+	if (dict->size == 0) {
+		return NULL;
+	}
+
+	char *value = NULL;
+	struct entry *entry = _dict_find(dict->entries, dict->capacity, key);
+
+	if (entry->key != NULL && strcmp(key, entry->key) == 0) {
+		value = entry->value;
+
+		free(entry->key);
+		free(entry->value);
+		entry->key = NULL;
+		entry->value = NULL;
+
+		--dict->size;
+	}
+
+	return value;
 }

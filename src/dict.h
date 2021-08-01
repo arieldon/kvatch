@@ -15,7 +15,7 @@
 
 struct entry {
 	char *key;
-	void *value;
+	char *value;
 };
 
 struct dict {
@@ -28,30 +28,15 @@ struct dict {
 struct dict *dict_create(void);
 
 /* Free dictionary and its entries the heap. */
-void dict_destroy(struct dict *d);
+void dict_clear(struct dict *dict);
 
 /* Enter a new key-value pair into the dictionary. */
-struct entry *dict_add(struct dict *d, const char *key, void *value);
+struct entry *dict_add(struct dict *dict, const char *key, char *value);
 
 /* Retrieve a value given its key. */
-void *dict_get(struct dict *d, const char *key);
+char *dict_get(struct dict *dict, const char *key);
 
 /* Remove and return an existing key-value pair from the dictionary. */
-void *dict_del(struct dict *d, const char *key);
-
-
-/* Use FNV-1a hash function for interaction with dictionary. */
-uint32_t _dict_hash(const char *key);
-
-/* Find either an entry by key or an empty space. */
-struct entry *_dict_find(struct entry *entries, size_t capacity,
-	const char *key);
-
-/* Set key and value of a new entry or modify value of an existing entry. */
-struct entry *_dict_set(struct entry *entries, size_t *size, size_t capacity,
-	const char *key, void *value);
-
-/* Expand the capacity of the dictionary to reduce its load factor. */
-void _dict_expand(struct dict *d);
+char *dict_del(struct dict *dict, const char *key);
 
 #endif
