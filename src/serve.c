@@ -100,7 +100,7 @@ run_server(struct httpserver *server, struct dict *dict)
 				resp_code(STATUS_NOT_FOUND);
 			} else {
 				char body[BUFSIZ] = { 0 };
-				snprintf(body, BUFSIZ, "{'%s': '%s'}\n",
+				snprintf(body, BUFSIZ, "{\"%s\": \"%s\"}\n",
 					req.uri + 1,
 					value);
 				respond(server->fds[i].fd, STATUS_OK, body);
