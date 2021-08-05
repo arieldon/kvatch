@@ -39,7 +39,7 @@ struct httpserver {
 	nfds_t fdsz;
 };
 
-int init_server(struct httpserver *server);
+int init_server(struct httpserver *server, char *port);
 int run_server(struct httpserver *server, struct dict *dict);
 void free_server(struct httpserver *server);
 

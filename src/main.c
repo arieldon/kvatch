@@ -1,13 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <getopt.h>
+
 #include "serve.h"
 
-int
-main(void)
+static void
+usage(void)
 {
+	fprintf(stderr, "usage: kvatch [-p PORT]\n");
+}
+
+int
+main(int argc, char **argv)
+{
+	char *port = "4000";
+
+	int c;
+	while ((c = getopt(argc, argv, "p:h:")) != -1) {
+		switch (c) {
+		case 'p':
+			port = optarg;
+			break;
+		case 'h':
+			usage();
+			exit(EXIT_SUCCESS);
+		default:
+			fprintf(stderr, "kvatch: unable to recognize option\n");
+			usage();
+			exit(EXIT_FAILURE);
+		}
+	}
+	if (optind < argc) {
+		usage();
+		exit(EXIT_FAILURE);
+	}
+
 	struct httpserver server = { 0 };
-	if (init_server(&server) == -1) {
+	if (init_server(&server, port) == -1) {
 		fprintf(stderr, "kvatch: unable to initialize server\n");
 		exit(EXIT_FAILURE);
 	}

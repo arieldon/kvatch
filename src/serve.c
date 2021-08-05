@@ -1,13 +1,13 @@
 #include "serve.h"
 
 int
-init_server(struct httpserver *server)
+init_server(struct httpserver *server, char *port)
 {
 	int status, t = 1;
 	struct addrinfo *res, *p;
 	struct addrinfo hints = { 0 };
 
-	server->port = "4000";
+	server->port = port;
 
 	server->nfds = 0;
 	server->fdsz = 8;
@@ -23,7 +23,7 @@ init_server(struct httpserver *server)
 	hints.ai_protocol = 0;
 
 	if ((status = getaddrinfo(NULL, server->port, &hints, &res)) != 0) {
-		fprintf(stderr, "getaddrinfo: %s", gai_strerror(status));
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
 		return -1;
 	}
 
