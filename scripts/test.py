@@ -10,7 +10,7 @@ CREATED = 201
 NO_CONTENT = 204
 
 
-def req(method: str = "GET", data: bytes = b"") -> None:
+def req(method: str = "GET", data: bytes = b"") -> urllib.request.Request:
     return urllib.request.Request(
         url="http://localhost:4000/some_key",
         method=method,
