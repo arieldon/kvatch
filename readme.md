@@ -26,7 +26,7 @@ Delete a value from the table:
 $ curl -vX DELETE localhost:4000/some_key
 ```
 
-Additional examples are available in `scripts/tests.py`.
+Additional examples are available in `scripts/test.py`.
 
 
 ## Installation
